@@ -7,6 +7,10 @@ use App\Models\Course;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
 
 class CourseController extends Controller
 {
@@ -14,29 +18,25 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        $query = Course::with(['category', 'instructor']);
+        $cacheKey = 'courses_' . md5(json_encode($request->all()));
 
-        if ($request->has('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
+        $courses = Cache::remember($cacheKey, 60, function () use ($request) {
+            $query = Course::with(['category', 'instructor']);
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->input('category_id'));
-        }
+            if ($request->has('search')) {
+                $query->where('title', 'like', '%' . $request->search . '%');
+            }
 
-        if ($request->has('level')) {
-            $query->where('level', $request->input('level'));
-        }
+            if ($request->has('category_id')) {
+                $query->where('category_id', $request->input('category_id'));
+            }
 
-        if ($request->has('sort_by') && $request->has('order')) {
-            $allowedSortFields = ['rating', 'enrolled_count', 'duration', 'price'];
-
-            if (in_array($request->input('sort_by'), $allowedSortFields)) {
+            if ($request->has('sort_by') && $request->has('order')) {
                 $query->orderBy($request->input('sort_by'), $request->input('order'));
             }
-        }
 
-        $courses = $query->get();
+            return $query->get();
+        });
 
         foreach ($courses as $course) {
             $course->rating_class = $course->rating_class;
@@ -51,21 +51,18 @@ class CourseController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'quota' => 'required|integer|min:0',
-            'rating' => 'required|numeric|min:0|max:10',
             'category_id' => 'required|exists:course_categories,id',
             'level' => 'required|in:beginner,intermediate,advanced',
-            'duration' => 'required|integer|min:1',
-            'thumbnail' => 'nullable|string',
-            'status' => 'in:draft,published',
-            'instructor_id' => 'required|exists:users,id'
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validasi gagal', $validator->errors(), 422);
         }
 
-        $course = Course::create($request->all());
+        $data = $request->all();
+        $data['instructor_id'] = Auth::user()->id;
+
+        $course = Course::create($data);
         return $this->successResponse($course, 'Kursus berhasil ditambahkan', 201);
     }
 
@@ -112,11 +109,31 @@ class CourseController extends Controller
     public function destroy($id)
     {
         $course = Course::with(['category', 'instructor'])->find($id);
+
         if (!$course) {
             return $this->errorResponse('Data tidak ditemukan', null, 404);
         }
 
+        if ($course->instructor_id() != Auth::user()->id && Auth::user()->role() != 'admin') {
+            return $this->errorResponse('Anda tidak memiliki izin untuk menghapus kursus ini', null, 403);
+        }
+
         $course->forceDelete();
         return $this->successResponse(null, 'Kursus berhasil dihapus');
+    }
+
+    public function stats()
+    {
+        $stats = DB::table('course_categories')
+            ->leftJoin('courses', 'course_categories.id', '=', 'courses.category_id')
+            ->select(
+                'course_categories.name as category_name',
+                DB::raw('COUNT(courses.id) as total_course'),
+                DB::raw('ROUND(AVG(courses.price), 0) as average_price')
+            )
+            ->groupBy('course_categories.name')
+            ->get();
+
+        return $this->successResponse($stats, 'Statistik kursus berhasil diambil');
     }
 }

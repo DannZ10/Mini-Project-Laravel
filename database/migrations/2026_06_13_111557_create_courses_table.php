@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('price', 10, 2)->default(0);
             $table->integer('quota')->default(0);
             $table->decimal('rating', 3, 1)->default(0.0);
-            $table->string('thumbnail')->nullable();
+            $table->text('thumbnail')->nullable();
             $table->enum('level', ['beginner', 'intermediate', 'advanced']);
             $table->integer('duration')->default(1);
             $table->enum('status', ['draft', 'published'])->default('draft');

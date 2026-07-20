@@ -114,11 +114,18 @@ class CourseController extends Controller
             return $this->errorResponse('Data tidak ditemukan', null, 404);
         }
 
-        if ($course->instructor_id() != Auth::user()->id && Auth::user()->role() != 'admin') {
-            return $this->errorResponse('Anda tidak memiliki izin untuk menghapus kursus ini', null, 403);
+        $user = Auth::user();
+
+        if ($user->role !== 'admin' && $user->role !== 'instructor') {
+            return $this->errorResponse('Akses ditolak! Hanya Admin dan Instructor yang dapat menghapus kursus.', null, 403);
+        }
+
+        if ($user->role === 'instructor' && $course->instructor_id !== $user->id) {
+            return $this->errorResponse('Akses ditolak! Anda tidak dapat menghapus kursus milik instruktur lain.', null, 403);
         }
 
         $course->forceDelete();
+
         return $this->successResponse(null, 'Kursus berhasil dihapus');
     }
 

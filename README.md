@@ -4,6 +4,13 @@ Sebuah RESTful API tangguh yang dibangun menggunakan **Laravel 11** untuk sistem
 
 ---
 
+## 🌐 Live Deployment
+- **Base API URL**: [https://mini-project-laravel-production.up.railway.app/api](https://mini-project-laravel-production.up.railway.app/api)
+- **Status**: ✅ Online (Deployed on Railway.app)
+- **Database**: MySQL 8.0 (Railway Internal)
+
+---
+
 ## 📌 Tahap 1: Day 34 - Mini Project REST API
 Fase ini berfokus pada pembangunan arsitektur dasar *database* dan operasi CRUD dengan struktur respons yang konsisten.
 

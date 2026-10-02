@@ -25,14 +25,17 @@ COPY . .
 RUN composer dump-autoload --optimize
 
 # Set permissions for Laravel storage & cache
-RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
+RUN mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Expose port (Render provides PORT env var dynamically)
+COPY deploy/start.sh /usr/local/bin/dibiedu-start
+RUN chmod +x /usr/local/bin/dibiedu-start
+
+# php artisan serve is single-threaded unless told otherwise.
+ENV PHP_CLI_SERVER_WORKERS=4
+
+# Render provides PORT dynamically; start.sh falls back to 8080.
 EXPOSE 8080
 
-# Start Laravel using artisan serve, reading PORT from env (default 8080)
-CMD php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+# Boot: key fallback, cache config/routes, migrate, seed an empty database, serve.
+CMD ["/usr/local/bin/dibiedu-start"]

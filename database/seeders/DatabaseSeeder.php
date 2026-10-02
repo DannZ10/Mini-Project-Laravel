@@ -19,6 +19,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Runs on every deploy: leave an already-seeded database alone.
+        if (User::exists()) {
+            return;
+        }
+
         // 1. Seed Users (Student, Instructors, Admin)
         $admin = User::create([
             'name' => 'Admin DibiEdu',

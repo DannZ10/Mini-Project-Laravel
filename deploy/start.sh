@@ -4,7 +4,7 @@ set -eu
 # Free-tier demo hosting: API tokens are hashed in the database, so a key that
 # changes on restart is harmless. Set APP_KEY in the host to keep one stable key.
 if [ -z "${APP_KEY:-}" ]; then
-    APP_KEY="$(php artisan key:generate --show | tail -n 1)"
+    APP_KEY="$(php artisan key:generate --show --no-ansi | tail -n 1)"
     export APP_KEY
 fi
 
